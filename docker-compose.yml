@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  dev:
+    image: ruby:2.5.1
+    links:
+      - mongo
+    command: echo 'dev environment started'
+
+  mongo:
+    image: mongo:3.4.16
+    entrypoint: mongod --smallfiles
+    ports:
+      - "27117:27017"
+    volumes:
+      - mongodb:/data/db
+
+volumes:
+  mongodb:
