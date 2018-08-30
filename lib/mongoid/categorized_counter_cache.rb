@@ -10,8 +10,8 @@ module Mongoid
     module ClassMethods
 
       def categorized_counter_cache relation_name
-        meta = reference_one_to_one relation_name, {}, Mongoid::Relations::Referenced::In
-        cache_column_base = meta.inverse_class_name.demodulize.underscore.pluralize
+        relation = self.relations[relation_name.to_s]
+        cache_column_base = relation.inverse_class_name.demodulize.underscore.pluralize
 
         after_create do
           category = yield self
@@ -30,7 +30,7 @@ module Mongoid
         end
 
         after_update do
-          foreign_key = meta.foreign_key
+          foreign_key = relation.foreign_key
           category = yield self
           cache_column = "#{cache_column_base}_#{category}_count"
 
@@ -55,7 +55,7 @@ module Mongoid
             original, current = attribute_change(foreign_key)
 
             unless original.nil?
-              meta.klass.with(persistence_context) do |_class|
+              relation.klass.with(persistence_context) do |_class|
                 _class.decrement_counter(cache_column, original)
               end
             end
