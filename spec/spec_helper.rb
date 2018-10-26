@@ -9,7 +9,7 @@ require 'rspec'
 require 'byebug'
 
 HOST = '127.0.0.1'
-PORT = '27117'
+PORT = ENV.fetch('MONGO_CCC_PORT', '27117')
 
 Mongoid.configure do |config|
   config.load_configuration({
