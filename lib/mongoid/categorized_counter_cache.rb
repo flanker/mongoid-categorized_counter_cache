@@ -11,12 +11,12 @@ module Mongoid
 
       def categorized_counter_cache relation_name, options = {}
         relation = self.relations[relation_name.to_s]
-        category_field_name = options[:by]
+        category_field_name, category_sub_field_name = options[:by].to_s.split('.')
         cache_column_base = relation.inverse_class_name.demodulize.underscore.pluralize
 
         after_create do
           if record = __send__(relation_name)
-            _original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
+            _original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
 
             record[current_cache_column] = (record[current_cache_column] || 0) + 1
 
@@ -35,7 +35,7 @@ module Mongoid
           if record = __send__(relation_name)
             if attribute_changed?(foreign_key)
               original, current = attribute_change(foreign_key)
-              original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
+              original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
 
               unless original.nil?
                 record.class.with(persistence_context) do |_class|
@@ -49,8 +49,8 @@ module Mongoid
                   _class.increment_counter(current_cache_column, current) if record.persisted? && current_cache_column.present?
                 end
               end
-            else attribute_changed?(category_field_name)
-              original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
+            elsif attribute_changed?(category_field_name)
+              original_cache_column, current_cache_column = cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
 
               record[original_cache_column] = (record[original_cache_column] || 0) - 1 if original_cache_column.present?
               record[current_cache_column] = (record[current_cache_column] || 0) + 1 if current_cache_column.present?
@@ -63,7 +63,7 @@ module Mongoid
             end
           elsif attribute_changed?(foreign_key)
             original, current = attribute_change(foreign_key)
-            original_cache_column, _current_cache_column = cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
+            original_cache_column, _current_cache_column = cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
 
             unless original.nil?
               relation.klass.with(persistence_context) do |_class|
@@ -75,9 +75,9 @@ module Mongoid
 
         before_destroy do
           if record = __send__(relation_name)
-            original_cache_column, _current_cache_column = cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
+            original_cache_column, _current_cache_column = cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
 
-            record[original_cache_column] = (record[original_cache_column] || 0) - 1 unless record.frozen? || original_cache_column.empty?
+            record[original_cache_column] = (record[original_cache_column] || 0) - 1 unless record.frozen? || original_cache_column.blank?
             if record.persisted?
               record.class.with(record.persistence_context) do |_class|
                 _class.decrement_counter(original_cache_column, record._id) if original_cache_column.present?
@@ -90,16 +90,28 @@ module Mongoid
       end
     end
 
-    def cateogrized_cached_counter_column_names(category_field_name, cache_column_base, options)
-      if attribute_changed?(category_field_name)
-        original_category, current_category = attribute_change(category_field_name)
-        original_cache_column = cache_column_name cache_column_base, original_category, options if original_category.present?
-        current_cache_column = cache_column_name cache_column_base, current_category, options if current_category.present?
+    def cateogrized_cached_counter_column_names(category_field_name, category_sub_field_name, cache_column_base, options)
+      if category_sub_field_name
+        if attribute_changed?(category_field_name)
+          original_category_field_id, current_category_field_id = attribute_change(category_field_name)
+          category_relation = self.relations[category_field_name]
+          original_category = category_relation.class_name.constantize.find_by(_id: original_category_field_id)&.send(category_sub_field_name) if original_category_field_id
+          current_category = category_relation.class_name.constantize.find_by(_id: current_category_field_id)&.send(category_sub_field_name) if current_category_field_id
+        else
+          current_category = self.send(category_field_name)&.send(category_sub_field_name)
+          original_category = current_category
+        end
       else
-        category = self.send category_field_name
-        current_cache_column = cache_column_name cache_column_base, category, options
-        original_cache_column = current_cache_column
+        if attribute_changed?(category_field_name)
+          original_category, current_category = attribute_change(category_field_name)
+        else
+          current_category = self.send category_field_name
+          original_category = current_category
+        end
       end
+
+      original_cache_column = cache_column_name cache_column_base, original_category, options if original_category.present?
+      current_cache_column = cache_column_name cache_column_base, current_category, options if current_category.present?
       return [original_cache_column, current_cache_column]
     end
 

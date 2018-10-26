@@ -265,4 +265,143 @@ describe Mongoid::CategorizedCounterCache do
 
   end
 
+  context 'using relation as category' do
+    let(:company) { CategoryAsRelation::Company.create }
+    let(:west_city) { CategoryAsRelation::City.create region: :west }
+    let(:east_city) { CategoryAsRelation::City.create region: :east }
+    let(:user) { CategoryAsRelation::User.create company: company, city: west_city }
+
+    before do
+      user
+    end
+
+    context 'creation' do
+
+      it 'increase counter when create resource with resource' do
+        company.set users_count: 5
+        company.set users_west_count: 3
+        company.set users_east_count: 2
+
+        CategoryAsRelation::User.create company: company, city: west_city
+
+        company.reload
+        expect(company.users_count).to eq(6)
+        expect(company.users_west_count).to eq(4)
+        expect(company.users_east_count).to eq(2)
+      end
+
+      it 'handles empty/nil value for relation' do
+        company.set users_count: 5
+        company.set users_west_count: 3
+        company.set users_east_count: 2
+
+        CategoryAsRelation::User.create company: company, city: nil
+
+        company.reload
+        expect(company.users_count).to eq(6)
+        expect(company.users_west_count).to eq(3)
+        expect(company.users_east_count).to eq(2)
+      end
+
+      it 'handles empty/nil value for cateogry form relation' do
+        company.set users_count: 5
+        company.set users_west_count: 3
+        company.set users_east_count: 2
+
+        no_region_city = CategoryAsRelation::City.create
+        CategoryAsRelation::User.create company: company, city: no_region_city
+
+        company.reload
+        expect(company.users_count).to eq(6)
+        expect(company.users_west_count).to eq(3)
+        expect(company.users_east_count).to eq(2)
+      end
+
+    end
+
+    context 'relation updated' do
+
+      let(:another_company) { CategoryAsRelation::Company.create }
+
+      context 'category has not been changed' do
+
+        it 'decrease the counter of original relation and increase the counter of current relation' do
+          company.set users_count: 5
+          company.set users_west_count: 3
+          company.set users_east_count: 2
+          another_company.set users_count: 50
+          another_company.set users_west_count: 30
+          another_company.set users_east_count: 20
+
+          user.update_attributes company: another_company
+
+          company.reload
+          another_company.reload
+          expect(company.users_count).to eq(4)
+          expect(company.users_west_count).to eq(2)
+          expect(company.users_east_count).to eq(2)
+          expect(another_company.users_count).to eq(51)
+          expect(another_company.users_west_count).to eq(31)
+          expect(another_company.users_east_count).to eq(20)
+        end
+
+      end
+
+      context 'category relation has been changed' do
+
+        it 'decrease the counter of original relation and increase the counter of current relation' do
+          company.set users_count: 5
+          company.set users_west_count: 3
+          company.set users_east_count: 2
+          another_company.set users_count: 50
+          another_company.set users_west_count: 30
+          another_company.set users_east_count: 20
+
+          user.update_attributes company: another_company, city: east_city
+
+          company.reload
+          another_company.reload
+          expect(company.users_count).to eq(4)
+          expect(company.users_west_count).to eq(2)
+          expect(company.users_east_count).to eq(2)
+          expect(another_company.users_count).to eq(51)
+          expect(another_company.users_west_count).to eq(30)
+          expect(another_company.users_east_count).to eq(21)
+        end
+      end
+
+    end
+
+    context 'category has been updated' do
+
+      it 'decrease the counter of original category and increase the counter of current category' do
+        company.set users_count: 5
+        company.set users_west_count: 3
+        company.set users_east_count: 2
+
+        user.update_attributes city: east_city
+
+        company.reload
+        expect(company.users_count).to eq(5)
+        expect(company.users_west_count).to eq(2)
+        expect(company.users_east_count).to eq(3)
+      end
+    end
+
+    context 'destroy' do
+
+      it 'decrease the counter of original category' do
+        company.set users_count: 5
+        company.set users_west_count: 3
+        company.set users_east_count: 2
+
+        user.destroy
+
+        company.reload
+        expect(company.users_count).to eq(4)
+        expect(company.users_west_count).to eq(2)
+        expect(company.users_east_count).to eq(2)
+      end
+    end
+  end
 end
