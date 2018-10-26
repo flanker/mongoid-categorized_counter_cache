@@ -88,4 +88,43 @@ describe Mongoid::CategorizedCounterCache do
       expect(company.staffs_female_count).to eq(2)
     end
   end
+
+  context 'category as prefix' do
+
+    let(:company) { CategoryAsPrefix::Company.create }
+    let(:user) { CategoryAsPrefix::User.create company: company, status: :active }
+
+    it 'create user' do
+      user
+
+      company.reload
+      expect(company.users_count).to eq(1)
+      expect(company.active_users_count).to eq(1)
+      expect(company.inactive_users_count).to eq(0)
+    end
+
+  end
+
+  context 'category changed' do
+
+    let(:company) { CategoryAsPrefix::Company.create }
+    let(:user) { CategoryAsPrefix::User.create company: company, status: :active }
+
+    before do
+      user
+      company.reload
+    end
+
+    it 'decrease the original count and increase the current count' do
+      expect(company.active_users_count).to eq(1)
+      expect(company.inactive_users_count).to eq(0)
+
+      byebug
+      user.update_attributes status: :inactive
+
+      company.reload
+      expect(company.active_users_count).to eq(0)
+      expect(company.inactive_users_count).to eq(1)
+    end
+  end
 end

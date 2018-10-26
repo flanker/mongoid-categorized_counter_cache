@@ -9,13 +9,14 @@ module Mongoid
 
     module ClassMethods
 
-      def categorized_counter_cache relation_name
+      def categorized_counter_cache relation_name, options = {}
         relation = self.relations[relation_name.to_s]
+        category_field_name = options[:by]
         cache_column_base = relation.inverse_class_name.demodulize.underscore.pluralize
 
         after_create do
-          category = yield self
-          cache_column = "#{cache_column_base}_#{category}_count"
+          category = self.send category_field_name
+          cache_column = cache_column_name cache_column_base, category, options
 
           if record = __send__(relation_name)
             record[cache_column] = (record[cache_column] || 0) + 1
@@ -31,8 +32,8 @@ module Mongoid
 
         after_update do
           foreign_key = relation.foreign_key
-          category = yield self
-          cache_column = "#{cache_column_base}_#{category}_count"
+          category = self.send category_field_name
+          cache_column = cache_column_name cache_column_base, category, options
 
           if record = __send__(relation_name)
             if attribute_changed?(foreign_key)
@@ -64,8 +65,8 @@ module Mongoid
 
         before_destroy do
           if record = __send__(relation_name)
-            category = yield self
-            cache_column = "#{cache_column_base}_#{category}_count"
+            category = self.send category_field_name
+            cache_column = cache_column_name cache_column_base, category, options
             record[cache_column] = (record[cache_column] || 0) - 1 unless record.frozen?
 
             if record.persisted?
@@ -79,5 +80,10 @@ module Mongoid
 
       end
     end
+
+    def cache_column_name cache_column_base, category, options
+      options[:prefix] ? "#{category}_#{cache_column_base}_count" : "#{cache_column_base}_#{category}_count"
+    end
+
   end
 end
