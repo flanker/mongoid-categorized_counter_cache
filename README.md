@@ -1,8 +1,6 @@
-# Mongoid::CategorizedCounterCache
+# mongoid-categorized_counter_cache
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/mongoid/categorized_counter_cache`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Enhancement to `counter cache` for `mongoid`
 
 ## Installation
 
@@ -22,18 +20,72 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+When you have a one-to-many relation using mongoid, you can define a `counter cache` attribute for the relation.
 
-## Development
+```
+class Author
+  include Mongoid::Document
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+  has_many :books
+end
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+class Book
+  include Mongoid::Document
+  
+  belongs_to :author, counter_cache: true
+end
+```
 
-## Contributing
+Then:
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/mongoid-categorized_counter_cache.
+```
+author = Author.create
+author.books.create
 
-## License
+author.books_count
+# => 1
+# returns a cached count of author.books
+```
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+`mongoid-categorized_counter_cache` helps to you cache the count of children documents by given category (any attribute of child document)
+
+```
+class Author
+  include Mongoid::Document
+
+  has_many :books
+end
+
+class Book
+  include Mongoid::Document
+  include Mongoid::CategorizedCounterCache
+  
+  field :genre
+  
+  belongs_to :author, counter_cache: true
+
+  categorized_counter_cache :author do |book|
+    book.genre
+  end
+end
+```
+
+Then:
+
+```
+author = Author.create
+author.books.create genre: 'fiction'
+author.books.create genre: 'drama'
+
+author.books_count
+# => 2
+# returns a cached count of all author.books
+
+author.books_fiction_count
+# => 1
+# returns a cached count of all author.books which has a fiction genre
+
+author.books_drama_count
+# => 1
+# returns a cached count of all author.books which has a drama genre
+```
