@@ -22,7 +22,7 @@ Or install it yourself as:
 
 When you have a one-to-many relation using mongoid, you can define a `counter cache` attribute for the relation.
 
-```
+```ruby
 class Author
   include Mongoid::Document
 
@@ -38,7 +38,7 @@ end
 
 Then:
 
-```
+```ruby
 author = Author.create
 author.books.create
 
@@ -49,7 +49,7 @@ author.books_count
 
 `mongoid-categorized_counter_cache` helps to you cache the count of children documents by given category (any attribute of child document)
 
-```
+```ruby
 class Author
   include Mongoid::Document
 
@@ -72,7 +72,7 @@ end
 
 Then:
 
-```
+```ruby
 author = Author.create
 author.books.create genre: 'fiction'
 author.books.create genre: 'drama'
