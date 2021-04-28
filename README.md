@@ -89,3 +89,5 @@ author.books_drama_count
 # => 1
 # returns a cached count of all author.books which has a drama genre
 ```
+
+[See spec test for more info](spec/mongoid/categorized_counter_cache_spec.rb)
