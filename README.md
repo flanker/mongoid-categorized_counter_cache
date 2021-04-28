@@ -1,5 +1,7 @@
 # mongoid-categorized_counter_cache
 
+[![Build Status](https://www.travis-ci.com/flanker/mongoid-categorized_counter_cache.svg?branch=master)](https://www.travis-ci.com/flanker/mongoid-categorized_counter_cache)
+
 Enhancement to `counter cache` for `mongoid`
 
 ## Installation
