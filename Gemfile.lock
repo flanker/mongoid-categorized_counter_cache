@@ -49,11 +49,11 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  bundler (~> 1.16)
+  bundler (>= 2.2.10)
   byebug (~> 10.0.0)
   mongoid-categorized_counter_cache!
   rake (~> 13.0)
   rspec (~> 3.0)
 
 BUNDLED WITH
-   1.16.4
+   2.2.24
